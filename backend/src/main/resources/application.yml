@@ -1,0 +1,49 @@
+spring:
+  application:
+    name: lumo-backend
+  
+  datasource:
+    url: jdbc:postgresql://localhost:5432/lumo_db
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    open-in-view: false
+  
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: UTC
+
+server:
+  port: 8080
+  error:
+    include-message: always
+    include-binding-errors: always
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:your-super-secret-jwt-key-change-this-in-production-minimum-256-bits}
+  expiration: 86400000 # 24 hours in milliseconds
+
+# Google Gemini API Configuration
+gemini:
+  api:
+    key: ${GEMINI_API_KEY:your-gemini-api-key}
+    url: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent
+    model: gemini-1.5-flash
+
+# Logging
+logging:
+  level:
+    com.lumo: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
