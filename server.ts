@@ -2,9 +2,8 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
-import 'dotenv/config';
-import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
+import 'dotenv/config';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY?.trim() || "";
 const HAS_GEMINI_KEY = Boolean(GEMINI_API_KEY && GEMINI_API_KEY !== "your_gemini_api_key_here");
@@ -902,6 +901,7 @@ Generate 3 CBT-style cognitive reframing statements. Return JSON with key "refra
     if (!isVercel) {
       const PORT = Number(process.env.PORT) || 3000;
       if (process.env.NODE_ENV !== "production") {
+        const { createServer: createViteServer } = await import("vite");
         const vite = await createViteServer({
           server: {
             middlewareMode: true,
