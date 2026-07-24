@@ -932,7 +932,7 @@ Generate 3 CBT-style cognitive reframing statements. Return JSON with key "refra
       } else {
         const distPath = path.join(process.cwd(), "dist");
         app.use(express.static(distPath));
-        app.get("*", (_req, res) => {
+        app.get("*", (_req: any, res: any) => {
           res.sendFile(path.join(distPath, "index.html"));
         });
       }
