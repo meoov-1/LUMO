@@ -155,8 +155,15 @@ function verifyToken(token: string): string | null {
   }
 }
 
-// Global DB in memory
-const db = loadDatabase();
+// Global DB in memory — safely initialized with fallback
+let db: DatabaseSchema;
+try {
+  db = loadDatabase();
+} catch (initErr) {
+  console.error("[FATAL] Database initialization failed, using empty DB:", initErr);
+  db = { users: {}, journalEntries: [], careerPredictions: [] };
+  ensureSeededUsers(db);
+}
 
 function sanitizeUser(user: UserEntity) {
   const { passwordHash, ...rest } = user;
@@ -227,7 +234,7 @@ app.use(express.json({ limit: '10mb' }));
   // ------------------------------------------------------------------
 
   // POST /api/auth/register - Register new user
-  app.post("/api/auth/register", (req, res) => {
+  app.post("/api/auth/register", (req: any, res: any) => {
     try {
       const { email, password, fullName, username } = req.body;
 
@@ -275,7 +282,7 @@ app.use(express.json({ limit: '10mb' }));
   });
 
   // POST /api/auth/login - Login & return JWT (supports email or username)
-  app.post("/api/auth/login", (req, res) => {
+  app.post("/api/auth/login", (req: any, res: any) => {
     try {
       const { email, password } = req.body;
 
@@ -964,22 +971,28 @@ Generate 3 CBT-style cognitive reframing statements. Return JSON with key "refra
 // Catches any error that reaches `next(err)` (including unhandled async
 // rejections wrapped by `asyncHandler`) and returns a valid JSON response
 // instead of the default Express HTML error page.
-app.use((err: any, _req: any, res: any, _next: any) => {
-  console.error("[Global Error Handler] Unhandled error:", err?.message || err);
-  const statusCode = err?.status || err?.statusCode || 500;
-  res.status(statusCode).json({
-    success: false,
-    error: err?.message || "An unexpected server error occurred.",
+  // ------------------------------------------------------------------
+  // GLOBAL EXPRESS ERROR HANDLER
+  // ------------------------------------------------------------------
+  // Catches any error that reaches `next(err)` (including unhandled async
+  // rejections wrapped by `asyncHandler`) and returns a valid JSON response
+  // instead of the default Express HTML error page.
+  app.use((err: any, _req: any, res: any, _next: any) => {
+    console.error("[Global Error Handler] Unhandled error:", err?.message || err);
+    const statusCode = err?.status || err?.statusCode || 500;
+    res.status(statusCode).json({
+      success: false,
+      error: err?.message || "An unexpected server error occurred.",
+    });
   });
-});
 
-// Catch any async rejection that wasn't handled elsewhere (safety net)
-process.on("unhandledRejection", (reason: any) => {
-  console.error("[unhandledRejection]", reason?.message || reason);
-});
-process.on("uncaughtException", (error: Error) => {
-  console.error("[uncaughtException]", error?.message || error);
-});
+  // Catch any async rejection that wasn't handled elsewhere (safety net)
+  process.on("unhandledRejection", (reason: any) => {
+    console.error("[unhandledRejection]", reason?.message || reason);
+  });
+  process.on("uncaughtException", (error: Error) => {
+    console.error("[uncaughtException]", error?.message || error);
+  });
 
   export default app;
 
