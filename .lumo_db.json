@@ -1,0 +1,42 @@
+{
+  "users": {
+    "user_demo_123": {
+      "id": "user_demo_123",
+      "email": "explorer@lumo.app",
+      "passwordHash": "ced32389a70b145c44902e47991c4e4b6f0ef5b5ee34cf0cbab63e42762805c6",
+      "fullName": "Explorer",
+      "username": "explorer_user",
+      "currentCycle": 1,
+      "currentLevel": 3,
+      "lastJournalTimestamp": "2026-07-23T13:24:42.656Z",
+      "createdAt": "2026-07-24T14:24:42.657Z",
+      "updatedAt": "2026-07-24T14:24:42.657Z"
+    },
+    "user_1784908022808_ahsk6": {
+      "id": "user_1784908022808_ahsk6",
+      "email": "snehagiri157@gmail.com",
+      "passwordHash": "19d9bd59d934b40a22e09b907042d9591f87f5f28734945b76f3f3058bf7bf4e",
+      "fullName": "sneha",
+      "username": "sneha",
+      "currentCycle": 1,
+      "currentLevel": 0,
+      "lastJournalTimestamp": null,
+      "createdAt": "2026-07-24T15:47:02.819Z",
+      "updatedAt": "2026-07-24T15:47:02.819Z"
+    },
+    "user_1784908796415_jf4nm": {
+      "id": "user_1784908796415_jf4nm",
+      "email": "snehagiri17@gmail.com",
+      "passwordHash": "d0a81361b09b4d22d72e9c70eb02ed8feb323c7cbda3b8a9302eebf215be915b",
+      "fullName": "sneha",
+      "username": "asd",
+      "currentCycle": 1,
+      "currentLevel": 0,
+      "lastJournalTimestamp": null,
+      "createdAt": "2026-07-24T15:59:56.415Z",
+      "updatedAt": "2026-07-24T15:59:56.415Z"
+    }
+  },
+  "journalEntries": [],
+  "careerPredictions": []
+}
