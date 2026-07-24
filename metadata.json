@@ -1,6 +1,0 @@
-{
-  "name": "Lumo",
-  "description": "Daily CBT mental health and career journal companion app.",
-  "requestFramePermissions": ["microphone"],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
