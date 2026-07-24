@@ -183,25 +183,44 @@ app.use(express.json({ limit: '10mb' }));
 
   // Authentication Middleware
   const authenticateUser = (req: any, res: any, next: any) => {
-    const authHeader = req.headers.authorization;
-    let userId: string | null = null;
+    try {
+      const authHeader = req.headers.authorization;
+      let userId: string | null = null;
 
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      const token = authHeader.substring(7);
-      userId = verifyToken(token);
-    } else if (req.headers["x-user-id"]) {
-      userId = req.headers["x-user-id"] as string;
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        const token = authHeader.substring(7);
+        userId = verifyToken(token);
+      } else if (req.headers["x-user-id"]) {
+        userId = req.headers["x-user-id"] as string;
+      }
+
+      if (userId && db.users[userId]) {
+        req.user = db.users[userId];
+      } else if (userId) {
+        // Token/userId present but user not found in DB — invalid
+        return res.status(401).json({ success: false, error: "User not found. Please login again." });
+      } else {
+        // No valid authentication provided
+        // Fallback: use demo user for frictionless frontend testing
+        const demoFallback = Object.values(db.users)[0];
+        if (demoFallback) {
+          req.user = demoFallback;
+        } else {
+          return res.status(401).json({ success: false, error: "Authentication required." });
+        }
+      }
+
+      next();
+    } catch (authError: any) {
+      console.error("[authenticateUser] Error:", authError);
+      return res.status(500).json({ success: false, error: "Authentication error." });
     }
-
-    if (userId && db.users[userId]) {
-      req.user = db.users[userId];
-    } else {
-      // Default fallback to demo user for frictionless frontend testing
-      req.user = Object.values(db.users)[0] || null;
-    }
-
-    next();
   };
+
+  // Wraps async Express route handlers so unhandled promise rejections are
+  // forwarded to the global Express error handler instead of crashing the function.
+  const asyncHandler = (fn: Function) => (req: any, res: any, next: any) =>
+    Promise.resolve(fn(req, res, next)).catch(next);
 
   // ------------------------------------------------------------------
   // 1. AUTHENTICATION & USER MANAGEMENT ENDPOINTS
@@ -481,7 +500,7 @@ ${journalSummaryText || "User completed 30 reflections."}`;
   }
 
   // POST /api/journal/submit - Submit daily entry (enforces 24-hour lock & level progression)
-  app.post("/api/journal/submit", authenticateUser, async (req: any, res) => {
+  app.post("/api/journal/submit", authenticateUser, asyncHandler(async (req: any, res) => {
     try {
       const user: UserEntity = req.user;
       if (!user) {
@@ -564,7 +583,7 @@ ${journalSummaryText || "User completed 30 reflections."}`;
       console.error("Error in /api/journal/submit:", e);
       res.status(500).json({ success: false, error: e.message || "Failed to save journal entry" });
     }
-  });
+  }));
 
   // POST /api/user/complete-cycle - Reset current level to 0 for a new cycle while preserving all journal data
   app.post("/api/user/complete-cycle", authenticateUser, (req: any, res) => {
@@ -628,7 +647,7 @@ ${journalSummaryText || "User completed 30 reflections."}`;
   // ------------------------------------------------------------------
 
   // GET /api/career/prediction - Get latest AI Career Path prediction after 30 days
-  app.get("/api/career/prediction", authenticateUser, async (req: any, res) => {
+  app.get("/api/career/prediction", authenticateUser, asyncHandler(async (req: any, res) => {
     try {
       const user: UserEntity = req.user;
       if (!user) {
@@ -655,7 +674,7 @@ ${journalSummaryText || "User completed 30 reflections."}`;
       console.error("Error in /api/career/prediction:", e);
       res.status(500).json({ success: false, error: e.message });
     }
-  });
+  }));
 
   // POST /api/user/reset-cooldown - Helper / Dev endpoint to test 24h cooldown reset or level skip
   app.post("/api/user/reset-cooldown", authenticateUser, (req: any, res) => {
@@ -690,7 +709,7 @@ ${journalSummaryText || "User completed 30 reflections."}`;
   // ENCOURAGING WORDS & DAILY SUPPORT ENDPOINT
   // ------------------------------------------------------------------
 
-  app.post("/api/encouraging-words", authenticateUser, async (req: any, res) => {
+  app.post("/api/encouraging-words", authenticateUser, asyncHandler(async (req: any, res) => {
     try {
       const { journals = {}, mood, userName } = req.body;
       const activeUserName = req.user?.fullName || userName || "Explorer";
@@ -743,9 +762,9 @@ Generate a deeply personal, soothing, and genuinely encouraging set of words for
       console.error("Error generating encouraging words:", error);
       res.status(500).json({ success: false, error: error?.message || "Failed to generate encouraging words." });
     }
-  });
+  }));
 
-  app.post("/api/career-advice", authenticateUser, async (req: any, res) => {
+  app.post("/api/career-advice", authenticateUser, asyncHandler(async (req: any, res) => {
     try {
       const { journals = {}, events = [], userName } = req.body;
       const activeUserName = req.user?.fullName || userName || "Explorer";
@@ -816,9 +835,9 @@ Based on the emotional tone, expressed interests, problem-solving habits, values
       console.error("Error generating career advice:", error);
       res.status(500).json({ success: false, error: error?.message || "Failed to analyze journals." });
     }
-  });
+  }));
 
-  app.post("/api/generate-reframe", async (req, res) => {
+  app.post("/api/generate-reframe", asyncHandler(async (req, res) => {
     try {
       const { userThought, context } = req.body;
       const prompt = `The user shared a thought: "${userThought || 'I feel nervous'}".
@@ -845,9 +864,9 @@ Generate 3 CBT-style cognitive reframing statements. Return JSON with key "refra
     } catch (error: any) {
       res.status(500).json({ success: false, error: "Failed to generate reframes" });
     }
-  });
+  }));
 
-  app.post("/api/socio-chat", async (req, res) => {
+  app.post("/api/socio-chat", asyncHandler(async (req, res) => {
     try {
       const { message, history = [], fileData, imageBase64, mimeType, fileName } = req.body;
       const attachment = fileData || (imageBase64 ? { base64: imageBase64, mimeType, fileName } : null);
@@ -894,7 +913,7 @@ Generate 3 CBT-style cognitive reframing statements. Return JSON with key "refra
       console.error("[/api/socio-chat] ERROR:", error);
       res.status(500).json({ success: false, error: error?.message || "Failed to communicate with Gemini AI." });
     }
-  });
+  }));
 
   // Vite middleware for development vs static serve for production
   async function startServer() {
@@ -938,6 +957,29 @@ Generate 3 CBT-style cognitive reframing statements. Return JSON with key "refra
   startServer().catch((err) => {
     console.error("Fatal error starting Lumo backend server:", err);
   });
+
+// ------------------------------------------------------------------
+// GLOBAL EXPRESS ERROR HANDLER
+// ------------------------------------------------------------------
+// Catches any error that reaches `next(err)` (including unhandled async
+// rejections wrapped by `asyncHandler`) and returns a valid JSON response
+// instead of the default Express HTML error page.
+app.use((err: any, _req: any, res: any, _next: any) => {
+  console.error("[Global Error Handler] Unhandled error:", err?.message || err);
+  const statusCode = err?.status || err?.statusCode || 500;
+  res.status(statusCode).json({
+    success: false,
+    error: err?.message || "An unexpected server error occurred.",
+  });
+});
+
+// Catch any async rejection that wasn't handled elsewhere (safety net)
+process.on("unhandledRejection", (reason: any) => {
+  console.error("[unhandledRejection]", reason?.message || reason);
+});
+process.on("uncaughtException", (error: Error) => {
+  console.error("[uncaughtException]", error?.message || error);
+});
 
   export default app;
 
