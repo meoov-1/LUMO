@@ -2,7 +2,8 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
-import { GoogleGenAI, Type } from "@google/genai";
+// @google/genai is imported lazily via dynamic import to avoid
+// module-level crashes in serverless environments.
 import 'dotenv/config';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY?.trim() || "";
@@ -173,11 +174,22 @@ function sanitizeUser(user: UserEntity) {
 export const app = express();
 app.use(express.json({ limit: '10mb' }));
 
-  // Helper to safely obtain Gemini AI client
-  const getAi = () => {
+  // Health check — no deps, always returns JSON
+  app.get("/api/health", (_req: any, res: any) => {
+    res.json({
+      success: true,
+      status: "ok",
+      timestamp: new Date().toISOString(),
+      userCount: Object.keys(db?.users || {}).length,
+    });
+  });
+
+  // Helper to safely obtain Gemini AI client (lazy import)
+  const getAi = async () => {
     if (!HAS_GEMINI_KEY) {
       throw new Error("GEMINI_API_KEY is not configured. Add it to your .env file.");
     }
+    const { GoogleGenAI } = await import("@google/genai");
     return new GoogleGenAI({
       apiKey: GEMINI_API_KEY,
       httpOptions: {
@@ -401,35 +413,35 @@ ${journalSummaryText || "User completed 30 reflections."}`;
           systemInstruction: "You are Lumo AI, a master behavioral scientist & career counselor.",
           responseMimeType: "application/json",
           responseSchema: {
-            type: Type.OBJECT,
+            type: "OBJECT",
             properties: {
               topCareers: {
-                type: Type.ARRAY,
+                type: "ARRAY",
                 items: {
-                  type: Type.OBJECT,
+                  type: "OBJECT",
                   properties: {
-                    title: { type: Type.STRING },
-                    matchPercentage: { type: Type.INTEGER },
-                    whyItFits: { type: Type.STRING },
-                    keySkillsToLeverage: { type: Type.ARRAY, items: { type: Type.STRING } },
-                    firstStep: { type: Type.STRING }
+                    title: { type: "STRING" },
+                    matchPercentage: { type: "INTEGER" },
+                    whyItFits: { type: "STRING" },
+                    keySkillsToLeverage: { type: "ARRAY", items: { type: "STRING" } },
+                    firstStep: { type: "STRING" }
                   },
                   required: ["title", "matchPercentage", "whyItFits", "keySkillsToLeverage", "firstStep"]
                 },
                 description: "Top 3 Recommended Career Paths"
               },
               strengthsSummary: {
-                type: Type.ARRAY,
-                items: { type: Type.STRING },
+                type: "ARRAY",
+                items: { type: "STRING" },
                 description: "Core Strengths & Values"
               },
               summary: {
-                type: Type.STRING,
+                type: "STRING",
                 description: "30-Day Growth Synthesis Summary"
               },
               growthRoadmap: {
-                type: Type.ARRAY,
-                items: { type: Type.STRING },
+                type: "ARRAY",
+                items: { type: "STRING" },
                 description: "Actionable Next Steps & Skill Growth Roadmap"
               }
             },
@@ -749,14 +761,14 @@ Generate a deeply personal, soothing, and genuinely encouraging set of words for
           systemInstruction: "You are Lumo, an empathetic, warm companion delivering uplifting encouragement and gentle affirmations.",
           responseMimeType: "application/json",
           responseSchema: {
-            type: Type.OBJECT,
+            type: "OBJECT",
             properties: {
-              greeting: { type: Type.STRING },
-              mainAffirmation: { type: Type.STRING },
-              encouragingMessages: { type: Type.ARRAY, items: { type: Type.STRING } },
-              dailyStrengths: { type: Type.ARRAY, items: { type: Type.STRING } },
-              upliftingQuote: { type: Type.STRING },
-              gentleTips: { type: Type.ARRAY, items: { type: Type.STRING } }
+              greeting: { type: "STRING" },
+              mainAffirmation: { type: "STRING" },
+              encouragingMessages: { type: "ARRAY", items: { type: "STRING" } },
+              dailyStrengths: { type: "ARRAY", items: { type: "STRING" } },
+              upliftingQuote: { type: "STRING" },
+              gentleTips: { type: "ARRAY", items: { type: "STRING" } }
             },
             required: ["greeting", "mainAffirmation", "encouragingMessages", "dailyStrengths", "upliftingQuote", "gentleTips"]
           }
@@ -810,26 +822,26 @@ Based on the emotional tone, expressed interests, problem-solving habits, values
           systemInstruction: "You are Lumo, an empathetic, insightful AI career & growth counselor.",
           responseMimeType: "application/json",
           responseSchema: {
-            type: Type.OBJECT,
+            type: "OBJECT",
             properties: {
-              summary: { type: Type.STRING },
+              summary: { type: "STRING" },
               recommendedPaths: {
-                type: Type.ARRAY,
+                type: "ARRAY",
                 items: {
-                  type: Type.OBJECT,
+                  type: "OBJECT",
                   properties: {
-                    title: { type: Type.STRING },
-                    matchPercentage: { type: Type.INTEGER },
-                    whyItFits: { type: Type.STRING },
-                    keySkillsToLeverage: { type: Type.ARRAY, items: { type: Type.STRING } },
-                    firstStep: { type: Type.STRING }
+                    title: { type: "STRING" },
+                    matchPercentage: { type: "INTEGER" },
+                    whyItFits: { type: "STRING" },
+                    keySkillsToLeverage: { type: "ARRAY", items: { type: "STRING" } },
+                    firstStep: { type: "STRING" }
                   },
                   required: ["title", "matchPercentage", "whyItFits", "keySkillsToLeverage", "firstStep"]
                 }
               },
-              detectedStrengths: { type: Type.ARRAY, items: { type: Type.STRING } },
-              actionableNextSteps: { type: Type.ARRAY, items: { type: Type.STRING } },
-              encouragingQuote: { type: Type.STRING }
+              detectedStrengths: { type: "ARRAY", items: { type: "STRING" } },
+              actionableNextSteps: { type: "ARRAY", items: { type: "STRING" } },
+              encouragingQuote: { type: "STRING" }
             },
             required: ["summary", "recommendedPaths", "detectedStrengths", "actionableNextSteps", "encouragingQuote"]
           }
@@ -857,9 +869,9 @@ Generate 3 CBT-style cognitive reframing statements. Return JSON with key "refra
         config: {
           responseMimeType: "application/json",
           responseSchema: {
-            type: Type.OBJECT,
+            type: "OBJECT",
             properties: {
-              reframes: { type: Type.ARRAY, items: { type: Type.STRING } }
+              reframes: { type: "ARRAY", items: { type: "STRING" } }
             },
             required: ["reframes"]
           }
@@ -965,18 +977,9 @@ Generate 3 CBT-style cognitive reframing statements. Return JSON with key "refra
     console.error("Fatal error starting Lumo backend server:", err);
   });
 
-// ------------------------------------------------------------------
-// GLOBAL EXPRESS ERROR HANDLER
-// ------------------------------------------------------------------
-// Catches any error that reaches `next(err)` (including unhandled async
-// rejections wrapped by `asyncHandler`) and returns a valid JSON response
-// instead of the default Express HTML error page.
   // ------------------------------------------------------------------
   // GLOBAL EXPRESS ERROR HANDLER
   // ------------------------------------------------------------------
-  // Catches any error that reaches `next(err)` (including unhandled async
-  // rejections wrapped by `asyncHandler`) and returns a valid JSON response
-  // instead of the default Express HTML error page.
   app.use((err: any, _req: any, res: any, _next: any) => {
     console.error("[Global Error Handler] Unhandled error:", err?.message || err);
     const statusCode = err?.status || err?.statusCode || 500;

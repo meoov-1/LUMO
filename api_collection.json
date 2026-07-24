@@ -1,0 +1,279 @@
+{
+  "info": {
+    "name": "Lumo API",
+    "description": "Complete API collection for the Lumo app - a 30-day journaling, career prediction, and AI companion platform.\n\nBase URL (Vercel): https://lumo-zeta-sage.vercel.app\nLocal: http://localhost:3000\n\n⚠️ Notes:\n- Most endpoints require auth via Bearer token (get from login/register)\n- Demo credentials: explorer@lumo.app / password123\n- AI endpoints (encouraging-words, career-advice, socio-chat, generate-reframe) require GEMINI_API_KEY to be set",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "🔐 Auth & User",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"yourpassword\",\n  \"fullName\": \"Your Name\",\n  \"username\": \"your_username\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "Register a new user account. Returns a JWT token and user object."
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"explorer@lumo.app\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Login with email/username + password. Returns JWT token.\n\nDemo user: explorer@lumo.app / password123"
+          }
+        },
+        {
+          "name": "Get User Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/user/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "status"]
+            },
+            "description": "Get current user status, 24h journal cooldown timer, and cycle/level info."
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"New Name\",\n  \"username\": \"new_username\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/user/update-profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "update-profile"]
+            },
+            "description": "Update user's full name and/or username."
+          }
+        },
+        {
+          "name": "Complete Cycle",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/user/complete-cycle",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "complete-cycle"]
+            },
+            "description": "Reset current level to 0 and increment cycle counter. All journal data is preserved."
+          }
+        },
+        {
+          "name": "Reset Cooldown (Dev)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"setLevel\": 29\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/user/reset-cooldown",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "reset-cooldown"]
+            },
+            "description": "DEV TOOL: Reset the 24h journal cooldown and optionally set a specific level (0-30)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "📓 Journal",
+      "item": [
+        {
+          "name": "Submit Journal Entry",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Today I focused on learning TypeScript generics. It was challenging but rewarding. I feel more confident about my coding skills.\",\n  \"moodTag\": \"Productive\",\n  \"reflectionScore\": 8\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/journal/submit",
+              "host": ["{{base_url}}"],
+              "path": ["api", "journal", "submit"]
+            },
+            "description": "Submit a daily journal entry. Enforces 24-hour cooldown between entries. At level 30, triggers AI career synthesis."
+          }
+        },
+        {
+          "name": "Get Journal History",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/journal/history",
+              "host": ["{{base_url}}"],
+              "path": ["api", "journal", "history"],
+              "query": [
+                { "key": "cycle", "value": "1", "description": "Optional: Filter by cycle number" }
+              ]
+            },
+            "description": "Fetch all past journal entries. Optionally filter by cycle number.\n\nQuery params:\n- cycle (number, optional): Filter entries by a specific cycle"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🤖 AI Features",
+      "item": [
+        {
+          "name": "Get Encouraging Words",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mood\": \"Anxious about my job interview tomorrow\",\n  \"journals\": {\n    \"1\": \"Started practicing interview questions\",\n    \"2\": \"Feeling nervous but prepared\"\n  },\n  \"userName\": \"Alex\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/encouraging-words",
+              "host": ["{{base_url}}"],
+              "path": ["api", "encouraging-words"]
+            },
+            "description": "Generate personalized encouraging words, affirmations, and emotional support using Gemini AI.\n\nRequires GEMINI_API_KEY to be configured."
+          }
+        },
+        {
+          "name": "Get Career Advice",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"journals\": {\n    \"1\": \"Worked on a team project today and led the presentation\",\n    \"2\": \"Enjoyed solving complex problems in Python\",\n    \"3\": \"Mentored a junior developer and found it fulfilling\"\n  },\n  \"events\": [\"Completed a leadership workshop\", \"Started learning cloud architecture\"],\n  \"userName\": \"Alex\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/career-advice",
+              "host": ["{{base_url}}"],
+              "path": ["api", "career-advice"]
+            },
+            "description": "Get AI-powered career path predictions based on journal entries and logged events.\n\nRequires GEMINI_API_KEY to be configured."
+          }
+        },
+        {
+          "name": "Get Career Prediction (30-Day)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/career/prediction",
+              "host": ["{{base_url}}"],
+              "path": ["api", "career", "prediction"],
+              "query": [
+                { "key": "cycle", "value": "1", "description": "Optional: Get prediction for a specific cycle" }
+              ]
+            },
+            "description": "Get the AI career path prediction for the current or specified cycle. Generated automatically at level 30.\n\nRequires GEMINI_API_KEY to be configured."
+          }
+        },
+        {
+          "name": "Generate CBT Reframe",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userThought\": \"I always mess up interviews. I'm never going to get a job.\",\n  \"context\": \"Job interview anxiety\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/generate-reframe",
+              "host": ["{{base_url}}"],
+              "path": ["api", "generate-reframe"]
+            },
+            "description": "Generate 3 CBT-style cognitive reframing statements for a negative thought.\n\nNo auth required. Requires GEMINI_API_KEY."
+          }
+        },
+        {
+          "name": "AI Socio Chat",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"I have a big presentation tomorrow. Can you give me some tips to stay calm and confident?\",\n  \"history\": [\n    { \"sender\": \"user\", \"text\": \"Hi Lumo, I'm feeling nervous about my presentation.\" },\n    { \"sender\": \"model\", \"text\": \"Hello! It's completely normal to feel nervous. Let's work through this together.\" }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/socio-chat",
+              "host": ["{{base_url}}"],
+              "path": ["api", "socio-chat"]
+            },
+            "description": "Chat with Lumo AI companion. Supports text messages and optional image/file attachments.\n\nNo auth required. Requires GEMINI_API_KEY.\n\nFor image attachments, include:\n- imageBase64: base64-encoded image data\n- mimeType: e.g. \"image/jpeg\", \"image/png\"\n- fileName: optional filename"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://lumo-zeta-sage.vercel.app",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
