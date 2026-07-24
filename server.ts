@@ -16,7 +16,23 @@ if (!HAS_GEMINI_KEY) {
 console.log("Current directory:", process.cwd());
 
 // Data persistence file path
-const DATA_FILE = path.join(process.cwd(), ".lumo_db.json");
+const isVercel = Boolean(process.env.VERCEL);
+const DATA_FILE = isVercel 
+  ? path.join("/tmp", ".lumo_db.json") 
+  : path.join(process.cwd(), ".lumo_db.json");
+
+// Copy seed database to /tmp if running on Vercel and it doesn't exist
+if (isVercel && !fs.existsSync(DATA_FILE)) {
+  const initialDbPath = path.join(process.cwd(), ".lumo_db.json");
+  if (fs.existsSync(initialDbPath)) {
+    try {
+      fs.copyFileSync(initialDbPath, DATA_FILE);
+      console.log("Copied database seed to /tmp/.lumo_db.json");
+    } catch (e) {
+      console.error("Failed to copy database seed to /tmp:", e);
+    }
+  }
+}
 
 interface UserEntity {
   id: string;
@@ -148,11 +164,8 @@ function sanitizeUser(user: UserEntity) {
   return rest;
 }
 
-async function startServer() {
-  const app = express();
-  const PORT = Number(process.env.PORT) || 3000;
-
-  app.use(express.json({ limit: '10mb' }));
+export const app = express();
+app.use(express.json({ limit: '10mb' }));
 
   // Helper to safely obtain Gemini AI client
   const getAi = () => {
@@ -885,40 +898,46 @@ Generate 3 CBT-style cognitive reframing statements. Return JSON with key "refra
   });
 
   // Vite middleware for development vs static serve for production
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: {
-        middlewareMode: true,
-        hmr: { port: Number(process.env.VITE_HMR_PORT) || 24679 },
-      },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    app.get("*", (_req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
-    });
+  async function startServer() {
+    if (!isVercel) {
+      const PORT = Number(process.env.PORT) || 3000;
+      if (process.env.NODE_ENV !== "production") {
+        const vite = await createViteServer({
+          server: {
+            middlewareMode: true,
+            hmr: { port: Number(process.env.VITE_HMR_PORT) || 24679 },
+          },
+          appType: "spa",
+        });
+        app.use(vite.middlewares);
+      } else {
+        const distPath = path.join(process.cwd(), "dist");
+        app.use(express.static(distPath));
+        app.get("*", (_req, res) => {
+          res.sendFile(path.join(distPath, "index.html"));
+        });
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        const server = app.listen(PORT, "0.0.0.0", () => {
+          console.log(`Lumo Backend & Web Server running on http://localhost:${PORT}`);
+          resolve();
+        });
+        server.on("error", (err: NodeJS.ErrnoException) => {
+          if (err.code === "EADDRINUSE") {
+            console.error(
+              `Port ${PORT} is already in use. Stop the other process or run: PORT=${PORT + 1} npm run dev`
+            );
+          }
+          reject(err);
+        });
+      });
+    }
   }
 
-  await new Promise<void>((resolve, reject) => {
-    const server = app.listen(PORT, "0.0.0.0", () => {
-      console.log(`Lumo Backend & Web Server running on http://localhost:${PORT}`);
-      resolve();
-    });
-    server.on("error", (err: NodeJS.ErrnoException) => {
-      if (err.code === "EADDRINUSE") {
-        console.error(
-          `Port ${PORT} is already in use. Stop the other process or run: PORT=${PORT + 1} npm run dev`
-        );
-      }
-      reject(err);
-    });
+  startServer().catch((err) => {
+    console.error("Fatal error starting Lumo backend server:", err);
   });
-}
 
-startServer().catch((err) => {
-  console.error("Fatal error starting Lumo backend server:", err);
-});
+  export default app;
 
